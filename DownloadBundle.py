@@ -25,6 +25,13 @@ def main():
                         help='Directory to save files',
                         required=True)
 
+    parser.add_argument('-b',
+                        '--byte-size',
+                        help='Number of bytes to chunk during download, can impact download speed.',
+                        default=2048,
+                        required=False,
+                        nargs='?')
+
     args = parser.parse_args()
 
     bundle_html = 'bundle.html'
@@ -55,7 +62,7 @@ def main():
 
     create_sub_directories(items_to_download, args.directory_name)
 
-    download_bundle(args.directory_name, items_to_download)
+    download_bundle(args.directory_name, items_to_download, args.byte_size)
 
 
 def find_download_links(soup):
@@ -93,21 +100,27 @@ def create_sub_directories(items_to_download, dir_name):
             os.makedirs(os.path.join(dir_name, item['sub_dir']))
 
 
-def download_bundle(path_to_save, items_to_download):
+def download_bundle(path_to_save, items_to_download, byte_size):
     for item in items_to_download:
 
-        response = requests.get(item['download_link'], stream=True)
         item_path = os.path.join(path_to_save, item['sub_dir'])
         file_name = os.path.join(item_path, item['file_name'] + '.' + item['file_type'])
         print('Saving {}.{}'.format(item['file_name'], item['file_type']))
+        print('To {}'.format(file_name))
 
         if not os.path.isfile(file_name):
-            with open(file_name, 'wb') as fout:
-                total_length = int(response.headers.get('content-length'))
-                for chunk in progress.bar(response.iter_content(1024), expected_size=(total_length / 1024) + 1):
-                    if chunk:
-                        fout.write(chunk)
-                        fout.flush()
+            response = requests.get(item['download_link'], stream=True)
+            if response.status_code == requests.codes.ok:
+                with open(file_name, 'wb') as fout:
+                    total_length = int(response.headers.get('content-length'))
+                    for chunk in progress.bar(response.iter_content(byte_size),
+                                              expected_size=(total_length / byte_size) + 1):
+                        if chunk:
+                            fout.write(chunk)
+                            fout.flush()
+            else:
+                print('There was an error connecting to the download link, please reload the page and try again.')
+                exit()
 
 
 def del_dir(dir_name):

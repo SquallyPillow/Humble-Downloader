@@ -19,7 +19,9 @@ On the command line run DownloadBundle.py from the root directory of where you w
   
   '-dir'  followed by the path you would like to save the bundle. ex: -dir "books\Crypto 2" will save the bundle to your currently                   directory + books\Crypto 2. This is a requirement.
   
-  '-b'    can change the byte size used to chunk the streaming file.  The default is 2048. 
+  '-b'    can change the byte size used to chunk the streaming file.  The default is 2048.
+  
+  '-f'    can specify type of file and will only download that file. ex: mp3, flac, pdf and  
   
   ex: DownloadBundle.py -a -dir "books/crypto" -b 1024
         This will prompt you to make the browser window with the bundle open active then download to books/cryto with a chunk size of 1024

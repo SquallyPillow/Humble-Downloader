@@ -5,6 +5,7 @@ import time
 import requests
 import argparse
 import auto_save_hb_html
+import sys
 
 from bs4 import BeautifulSoup
 from clint.textui import progress
@@ -32,6 +33,12 @@ def main():
                         required=False,
                         nargs='?')
 
+    parser.add_argument('-f',
+                        '--file-type',
+                        help='Choose only one file type to download. ex: MP3, FLAC',
+                        required=False
+                        )
+
     args = parser.parse_args()
 
     bundle_html = 'bundle.html'
@@ -58,26 +65,31 @@ def main():
         del_dir('bundle_files')
         os.remove(bundle_html)
 
-    items_to_download = find_download_links(soup)
+    items_to_download = find_download_links(soup, args.file_type)
 
     create_sub_directories(items_to_download, args.directory_name)
 
     download_bundle(args.directory_name, items_to_download, args.byte_size)
 
 
-def find_download_links(soup):
+def find_download_links(soup, file_type):
     items_to_download = []
+
+    if file_type is not None:
+        file_type = str(file_type).lower()
+        print(file_type)
 
     bundle_title = soup.find('div', {'id': 'hibtext'})
     bundle_title = str(bundle_title.text).strip().split('purchasing ', 1)[1]
 
     for link in soup.findAll('a'):
         if 'dl.humble' in str(link.get('href')):
-            items_to_download.append({'bundle_title': bundle_title,
-                                      'file_type': get_file_type(link.get('href')),
-                                      'download_link': str(link.get('href')),
-                                      'file_name': get_file_name(link.get('href')),
-                                      'sub_dir': str(link.text).strip()})
+            if file_type is None or file_type == str(link.text).strip().lower():
+                items_to_download.append({'bundle_title': bundle_title,
+                                          'file_type': get_file_type(link.get('href')),
+                                          'download_link': str(link.get('href')),
+                                          'file_name': get_file_name(link.get('href')),
+                                          'sub_dir': str(link.text).strip()})
 
     return items_to_download
 
@@ -85,6 +97,7 @@ def find_download_links(soup):
 def get_file_name(name):
     name = str(name).split('humble.com/')[1]
     name = name.split('.')[0]
+    name = name.replace('/', '-')
     return name
 
 
@@ -106,7 +119,6 @@ def download_bundle(path_to_save, items_to_download, byte_size):
         item_path = os.path.join(path_to_save, item['sub_dir'])
         file_name = os.path.join(item_path, item['file_name'] + '.' + item['file_type'])
         print('Saving {}.{}'.format(item['file_name'], item['file_type']))
-        print('To {}'.format(file_name))
 
         if not os.path.isfile(file_name):
             response = requests.get(item['download_link'], stream=True)
